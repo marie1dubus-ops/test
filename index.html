@@ -44,7 +44,6 @@
 <div id="log">Waiting for tap...<br></div>
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
-<button id="btn">Start AR</button>
 
 <script>
 window.onerror = (msg, src, line) => log('🔴 ERROR: ' + msg + ' (line ' + line + ')');
@@ -114,8 +113,6 @@ function animate() {
 animate();
 log('Render loop running ✅');
 
-// Hide the button entirely
-document.getElementById('btn').style.display = 'none';
 
 // Auto-start after a short delay
 setTimeout(() => {
@@ -293,3 +290,82 @@ try {
 
 function animate() {
   request
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+animate();
+log('Render loop running ✅');
+
+document.getElementById('btn').addEventListener('click', () => {
+  log('Button tapped ✅');
+  document.getElementById('btn').style.display = 'none';
+  step1_orientation();
+});
+
+function step1_orientation() {
+  log('Step 1: orientation...');
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission()
+      .then(state => {
+        log('Orientation: ' + state);
+        attachOrientation();
+        step2_camera();
+      })
+      .catch(err => {
+        log('❌ Orientation: ' + err.message);
+        step2_camera();
+      });
+  } else {
+    log('Orientation: no permission needed');
+    attachOrientation();
+    step2_camera();
+  }
+}
+
+function attachOrientation() {
+  window.addEventListener('deviceorientation', e => {
+    const heading = e.webkitCompassHeading != null ? e.webkitCompassHeading : (360 - (e.alpha || 0));
+    const tilt = e.beta != null ? e.beta : 90;
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = -(heading * Math.PI / 180);
+    camera.rotation.x = ((tilt - 90) * Math.PI / 180);
+  });
+  log('Orientation attached ✅');
+}
+
+function step2_camera() {
+  log('Step 2: camera...');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+    .then(stream => {
+      document.getElementById('video').srcObject = stream;
+      log('Camera ✅');
+      step3_gps();
+    })
+    .catch(err => {
+      log('❌ Camera: ' + err.name + ' — ' + err.message);
+      step3_gps();
+    });
+}
+
+function step3_gps() {
+  log('Step 3: GPS...');
+  navigator.geolocation.getCurrentPosition(
+    pos => log('GPS ✅ ' + pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5)),
+    err => log('❌ GPS: ' + err.message),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+  log('All steps done ✅');
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
