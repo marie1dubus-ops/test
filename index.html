@@ -114,11 +114,14 @@ function animate() {
 animate();
 log('Render loop running ✅');
 
-document.getElementById('btn').addEventListener('click', () => {
-  log('Button tapped ✅');
-  document.getElementById('btn').style.display = 'none';
+// Hide the button entirely
+document.getElementById('btn').style.display = 'none';
+
+// Auto-start after a short delay
+setTimeout(() => {
+  log('Auto-starting AR...');
   step1_orientation();
-});
+}, 1000);
 
 function step1_orientation() {
   log('Step 1: orientation...');
