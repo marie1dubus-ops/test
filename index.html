@@ -1,100 +1,52 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>Canal Crater AR</title>
+  <title>AR Test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: black; overflow: hidden; width: 100vw; height: 100vh; }
-
     #video {
-      position: fixed;
-      top: 0; left: 0;
+      position: fixed; top: 0; left: 0;
       width: 100%; height: 100%;
-      object-fit: cover;
-      z-index: 0;
+      object-fit: cover; z-index: 0;
     }
-
     #canvas {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      z-index: 1;
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 1;
     }
-
-    #debug {
-      position: fixed;
-      bottom: 20px;
-      left: 10px;
+    #log {
+      position: fixed; top: 10px; left: 10px;
       z-index: 99;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      padding: 8px 12px;
-      font-size: 12px;
-      border-radius: 8px;
-      max-width: 95vw;
-      font-family: monospace;
+      background: rgba(0,0,0,0.8);
+      color: lime; padding: 10px;
+      font-size: 13px; font-family: monospace;
+      border-radius: 8px; max-width: 90vw;
+      max-height: 50vh; overflow-y: auto;
     }
-
-    #start-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-family: sans-serif;
-      gap: 20px;
-      padding: 30px;
-      text-align: center;
-    }
-
-    #start-overlay h1 { font-size: 26px; }
-    #start-overlay p { font-size: 15px; opacity: 0.8; }
-
-    #start-btn {
-      padding: 18px 48px;
-      font-size: 20px;
-      border: none;
-      border-radius: 14px;
-      background: white;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
+    #btn {
+      position: fixed; bottom: 40px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 99; padding: 16px 40px;
+      font-size: 18px; border: none;
+      border-radius: 12px; background: white;
+      font-weight: bold; cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-<div id="start-overlay">
-  <h1>Canal Crater AR</h1>
-  <p>Point your phone toward the canal.<br>Allow camera and location when asked.</p>
-  <button id="start-btn">Start Experience</button>
-</div>
-
+<div id="log">Waiting for tap...<br></div>
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
-<div id="debug">Initializing...</div>
-
-<!-- Three.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<!-- GLTFLoader -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<button id="btn">Start AR</button>
 
 <script>
- <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-
-<script>
-// ── Global error catcher ──────────────────────────────────────
-window.onerror = (msg, src, line) => {
-  log('🔴 JS ERROR: ' + msg + ' (line ' + line + ')');
-};
+window.onerror = (msg, src, line) => log('🔴 ERROR: ' + msg + ' (line ' + line + ')');
 
 const log = msg => {
   const el = document.getElementById('log');
@@ -105,7 +57,6 @@ const log = msg => {
 
 log('Script loaded ✅');
 
-// ── Three.js ──────────────────────────────────────────────────
 let renderer, scene, camera;
 try {
   const canvas = document.getElementById('canvas');
@@ -122,140 +73,32 @@ try {
   scene.add(sun);
   log('Three.js ready ✅');
 } catch(e) {
-  log('❌ Three.js setup failed: ' + e.message);
+  log('❌ Three.js failed: ' + e.message);
 }
 
-// ── Red box placeholder (we will swap for your model later) ───
-// ── Load GLB model ────────────────────────────────────────────
 try {
   const loader = new THREE.GLTFLoader();
   log('Loading model...');
   loader.load(
-    './creat.glb/test-cube.glb',
+    './assets/test-cube.glb',
     gltf => {
       const model = gltf.scene;
-      model.position.set(0, -5, -20);
+      model.position.set(0, 0, -5);
       scene.add(model);
-      log('Model loaded ✅ — point phone forward');
+      log('Model loaded ✅');
     },
     xhr => {
       if (xhr.total > 0) {
         log('Loading: ' + Math.round(xhr.loaded / xhr.total * 100) + '%');
       } else {
-        log('Loading: ' + Math.round(xhr.loaded / 1024 / 1024) + 'MB received...');
+        log('Loading: ' + Math.round(xhr.loaded / 1024) + 'KB...');
       }
     },
-    err => {
-      log('❌ Model failed: ' + (err.message || JSON.stringify(err)));
-    }
+    err => log('❌ Model failed: ' + (err.message || JSON.stringify(err)))
   );
 } catch(e) {
   log('❌ Model exception: ' + e.message);
 }
 
-// ── Render loop ───────────────────────────────────────────────
-try {
-  function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-  }
-  animate();
-  log('Render loop running ✅');
-} catch(e) {
-  log('❌ Render loop failed: ' + e.message);
-}
-
-// ── Button ────────────────────────────────────────────────────
-document.getElementById('btn').addEventListener('click', () => {
-  log('Button tapped ✅');
-  document.getElementById('btn').style.display = 'none';
-  step1_orientation();
-});
-
-// ── Step 1: Orientation ───────────────────────────────────────
-function step1_orientation() {
-  log('Step 1: orientation...');
-  try {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      DeviceOrientationEvent.requestPermission()
-        .then(state => {
-          log('Orientation permission: ' + state);
-          attachOrientation();
-          step2_camera();
-        })
-        .catch(err => {
-          log('❌ Orientation denied: ' + err.message);
-          step2_camera(); // continue anyway
-        });
-    } else {
-      log('Orientation: no permission needed');
-      attachOrientation();
-      step2_camera();
-    }
-  } catch(e) {
-    log('❌ Orientation error: ' + e.message);
-    step2_camera();
-  }
-}
-
-function attachOrientation() {
-  window.addEventListener('deviceorientation', e => {
-    try {
-      const heading = e.webkitCompassHeading != null ? e.webkitCompassHeading : (360 - (e.alpha || 0));
-      const tilt = e.beta != null ? e.beta : 90;
-      camera.rotation.order = 'YXZ';
-      camera.rotation.y = -(heading * Math.PI / 180);
-      camera.rotation.x = ((tilt - 90) * Math.PI / 180);
-    } catch(err) {
-      // silent — fires every frame
-    }
-  });
-  log('Orientation listener attached ✅');
-}
-
-// ── Step 2: Camera ────────────────────────────────────────────
-function step2_camera() {
-  log('Step 2: camera...');
-  try {
-    navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
-      audio: false
-    })
-    .then(stream => {
-      log('Camera stream ✅');
-      document.getElementById('video').srcObject = stream;
-      step3_gps();
-    })
-    .catch(err => {
-      log('❌ Camera failed: ' + err.name + ' — ' + err.message);
-      step3_gps(); // continue anyway so GPS still logs
-    });
-  } catch(e) {
-    log('❌ Camera exception: ' + e.message);
-  }
-}
-
-// ── Step 3: GPS ───────────────────────────────────────────────
-function step3_gps() {
-  log('Step 3: GPS...');
-  try {
-    navigator.geolocation.getCurrentPosition(
-      pos => log('GPS ✅ ' + pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5)),
-      err => log('❌ GPS failed: ' + err.message),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  } catch(e) {
-    log('❌ GPS exception: ' + e.message);
-  }
-  log('--- All steps done — red box should be visible ahead ---');
-}
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-</script>
-</body>
-</html>
+function animate() {
+  request
