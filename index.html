@@ -47,7 +47,8 @@
 
 <script>
 window.onerror = (msg, src, line) => log('🔴 ERROR: ' + msg + ' (line ' + line + ')');
-
+window.addEventListener('unhandledrejection', e => log('🔴 PROMISE ERROR: ' + e.reason));
+  
 const log = msg => {
   const el = document.getElementById('log');
   el.innerHTML += msg + '<br>';
@@ -56,6 +57,8 @@ const log = msg => {
 };
 
 log('Script loaded ✅');
+  log('THREE loaded: ' + (typeof THREE !== 'undefined' ? '✅' : '❌'));
+log('GLTFLoader loaded: ' + (typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined' ? '✅' : '❌'));
 
 let renderer, scene, camera;
 try {
