@@ -96,7 +96,8 @@ loader.load(
   './assets/test-cube.glb',
   gltf => {
     const model = gltf.scene;
-    model.position.set(0, -3, -10);
+   model.position.set(0, 0, -3);
+   model.scale.set(3, 3, 3);
     scene.add(model);
     log('Model loaded ✅');
   },
@@ -150,7 +151,8 @@ function attachOrientation() {
 
     camera.rotation.order = 'YXZ';
     camera.rotation.y = -(heading * Math.PI / 180);
-    camera.rotation.x = ((tilt - 90) * Math.PI / 180);
+    // Fix: remap tilt so holding phone upright = looking forward
+    camera.rotation.x = ((tilt - 90) * Math.PI / 180) * -1;
   });
   log('Orientation attached ✅');
 }
