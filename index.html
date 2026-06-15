@@ -27,7 +27,22 @@
       color: lime; padding: 10px;
       font-size: 13px; font-family: monospace;
       border-radius: 8px; max-width: 90vw;
-      max-height: 50vh; overflow-y: auto;
+      max-height: 40vh; overflow-y: auto;
+    }
+    #tapbtn {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 50;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      font-size: 28px;
+      font-family: sans-serif;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
   </style>
 </head>
@@ -36,6 +51,9 @@
 <div id="log">Loading...<br></div>
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
+
+<!-- Fullscreen tap overlay — only needed for iOS orientation permission -->
+<div id="tapbtn">Tap anywhere to start AR</div>
 
 <script>
 window.onerror = (msg, src, line) => log('🔴 ERROR: ' + msg + ' (line ' + line + ')');
@@ -50,21 +68,17 @@ const log = msg => {
 
 log('Script loaded ✅');
 
-// ── Three.js setup ────────────────────────────────────────────
+// ── Three.js ──────────────────────────────────────────────────
 let renderer, scene, camera;
 const canvas = document.getElementById('canvas');
 renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setClearColor(0x000000, 0);
-
 scene = new THREE.Scene();
-
-// Camera represents your eye / phone position
 camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 5000);
-camera.position.set(0, 0, 0); // camera stays at origin
+camera.position.set(0, 0, 0);
 scene.add(camera);
-
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 const sun = new THREE.DirectionalLight(0xffffff, 1.0);
 sun.position.set(100, 200, 100);
@@ -82,10 +96,9 @@ loader.load(
   './assets/test-cube.glb',
   gltf => {
     const model = gltf.scene;
-    // Place model 10 meters north (negative Z) and 3 meters below eye level
     model.position.set(0, -3, -10);
     scene.add(model);
-    log('Model loaded ✅ — walk around to see it in 3D');
+    log('Model loaded ✅');
   },
   xhr => log('Loading: ' + Math.round(xhr.loaded / 1024) + 'KB...'),
   err => log('❌ Model failed: ' + (err.message || JSON.stringify(err)))
@@ -99,46 +112,7 @@ function animate() {
 animate();
 log('Render loop ✅');
 
-// ── Orientation (compass + tilt) ──────────────────────────────
-function startOrientation() {
-  if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission()
-      .then(state => {
-        log('Orientation: ' + state);
-        if (state === 'granted') attachOrientation();
-      })
-      .catch(err => log('❌ Orientation: ' + err.message));
-  } else {
-    log('Orientation: auto ✅');
-    attachOrientation();
-  }
-}
-
-function attachOrientation() {
-  let eventCount = 0;
-  window.addEventListener('deviceorientation', e => {
-    eventCount++;
-    const heading = e.webkitCompassHeading != null
-      ? e.webkitCompassHeading
-      : (360 - (e.alpha || 0));
-    const tilt = e.beta != null ? e.beta : 90;
-
-    // Show raw values every 30 events so we can see what's coming in
-    if (eventCount % 30 === 0) {
-      log('compass: ' + (e.webkitCompassHeading != null ? e.webkitCompassHeading.toFixed(1) : 'null') +
-          ' alpha: ' + (e.alpha != null ? e.alpha.toFixed(1) : 'null') +
-          ' beta: ' + (tilt.toFixed(1)));
-    }
-
-    camera.rotation.order = 'YXZ';
-    camera.rotation.y = -(heading * Math.PI / 180);
-    camera.rotation.x = ((tilt - 90) * Math.PI / 180);
-  });
-  log('Orientation attached ✅');
-}
-
-// ── Camera (video passthrough) ────────────────────────────────
+// ── Camera ────────────────────────────────────────────────────
 function startCamera() {
   navigator.mediaDevices.getUserMedia({
     video: { facingMode: 'environment' },
@@ -160,18 +134,49 @@ function startGPS() {
   );
 }
 
-// ── Auto start everything ─────────────────────────────────────
-setTimeout(() => {
-  log('Starting AR...');
-  startOrientation();
+// ── Orientation ───────────────────────────────────────────────
+function attachOrientation() {
+  let eventCount = 0;
+  window.addEventListener('deviceorientation', e => {
+    eventCount++;
+    const heading = e.webkitCompassHeading != null
+      ? e.webkitCompassHeading
+      : (360 - (e.alpha || 0));
+    const tilt = e.beta != null ? e.beta : 90;
+
+    if (eventCount % 30 === 0) {
+      log('heading: ' + heading.toFixed(1) + ' tilt: ' + tilt.toFixed(1));
+    }
+
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = -(heading * Math.PI / 180);
+    camera.rotation.x = ((tilt - 90) * Math.PI / 180);
+  });
+  log('Orientation attached ✅');
+}
+
+// ── Tap handler — must be first thing on tap for iOS ─────────
+document.getElementById('tapbtn').addEventListener('click', () => {
+  log('Tapped ✅');
+  document.getElementById('tapbtn').style.display = 'none';
+
+  // Request orientation FIRST, right inside the tap handler
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission()
+      .then(state => {
+        log('Orientation permission: ' + state);
+        attachOrientation();
+      })
+      .catch(err => log('❌ Orientation: ' + err.message));
+  } else {
+    log('Orientation: no permission needed');
+    attachOrientation();
+  }
+
+  // Camera and GPS start immediately on tap too
   startCamera();
   startGPS();
-}, 500);
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 </script>
 </body>
