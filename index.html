@@ -116,11 +116,21 @@ function startOrientation() {
 }
 
 function attachOrientation() {
+  let eventCount = 0;
   window.addEventListener('deviceorientation', e => {
+    eventCount++;
     const heading = e.webkitCompassHeading != null
       ? e.webkitCompassHeading
       : (360 - (e.alpha || 0));
     const tilt = e.beta != null ? e.beta : 90;
+
+    // Show raw values every 30 events so we can see what's coming in
+    if (eventCount % 30 === 0) {
+      log('compass: ' + (e.webkitCompassHeading != null ? e.webkitCompassHeading.toFixed(1) : 'null') +
+          ' alpha: ' + (e.alpha != null ? e.alpha.toFixed(1) : 'null') +
+          ' beta: ' + (tilt.toFixed(1)));
+    }
+
     camera.rotation.order = 'YXZ';
     camera.rotation.y = -(heading * Math.PI / 180);
     camera.rotation.x = ((tilt - 90) * Math.PI / 180);
