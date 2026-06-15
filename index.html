@@ -97,7 +97,7 @@ loader.load(
   gltf => {
     const model = gltf.scene;
    model.position.set(0, 0, -3);
-   model.scale.set(3, 3, 3);
+   model.scale.set(2, 2, 2);
     scene.add(model);
     log('Model loaded ✅');
   },
@@ -138,25 +138,41 @@ function startGPS() {
 // ── Orientation ───────────────────────────────────────────────
 function attachOrientation() {
   let eventCount = 0;
+  let smoothHeading = null;
+  let smoothTilt = 90;
+  const smooth = 0.1; // lower = more stable, higher = more responsive
+
   window.addEventListener('deviceorientation', e => {
     eventCount++;
-    const heading = e.webkitCompassHeading != null
+    const rawHeading = e.webkitCompassHeading != null
       ? e.webkitCompassHeading
       : (360 - (e.alpha || 0));
-    const tilt = e.beta != null ? e.beta : 90;
+    const rawTilt = e.beta != null ? e.beta : 90;
+
+    // Initialize smoothing on first event
+    if (smoothHeading === null) smoothHeading = rawHeading;
+
+    // Smooth heading — handle 0/360 wraparound
+    let diff = rawHeading - smoothHeading;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    smoothHeading += diff * smooth;
+    if (smoothHeading < 0) smoothHeading += 360;
+    if (smoothHeading >= 360) smoothHeading -= 360;
+
+    // Smooth tilt
+    smoothTilt += (rawTilt - smoothTilt) * smooth;
 
     if (eventCount % 30 === 0) {
-      log('heading: ' + heading.toFixed(1) + ' tilt: ' + tilt.toFixed(1));
+      log('heading: ' + smoothHeading.toFixed(1) + ' tilt: ' + smoothTilt.toFixed(1));
     }
 
     camera.rotation.order = 'YXZ';
-    camera.rotation.y = -(heading * Math.PI / 180);
-    // Fix: remap tilt so holding phone upright = looking forward
-    camera.rotation.x = ((tilt - 90) * Math.PI / 180) * -1;
+    camera.rotation.y = -(smoothHeading * Math.PI / 180);
+    camera.rotation.x = ((smoothTilt - 90) * Math.PI / 180);
   });
   log('Orientation attached ✅');
 }
-
 // ── Tap handler — must be first thing on tap for iOS ─────────
 document.getElementById('tapbtn').addEventListener('click', () => {
   log('Tapped ✅');
